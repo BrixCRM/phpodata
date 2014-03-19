@@ -47,8 +47,8 @@ try {
 }
 
 class PHPSvcUtil {
-	protected $_validOptions = array('/config', '/uri', '/metadata', '/out', '/u', '/p', '/sn', '/at', '/auth', '/ph', '/pp', '/pu', '/ppwd', '/ups');
-	protected $_auths = array('windows', 'acs');
+	protected $_validOptions = array('/config', '/uri', '/metadata', '/out', '/u', '/p', '/sn', '/at', '/auth', '/ph', '/pp', '/pu', '/ppwd', '/ups', '/header');
+	protected $_auths = array('windows', 'acs', 'basic');
 	protected $_cmdArgs;
 	protected $_options;
 	protected $_metadataDoc;
@@ -140,27 +140,40 @@ class PHPSvcUtil {
 		curl_setopt($curlHandle, CURLOPT_HEADER, true);
 		curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curlHandle, CURLOPT_SSL_VERIFYPEER, false);
-
+		
+		if (isset($this->_options['/header'])) {
+			curl_setopt($curlHandle, CURLOPT_HTTPHEADER, array(
+				$this->_options['/header/']
+			));
+		}
+		
 		if (isset($this->_options['/auth'])) {
 			switch($this->_options['/auth']) {
+			
+			case 'basic':
+				curl_setopt($curlHandle, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+				curl_setopt($curlHandle, CURLOPT_USERPWD, 
+					$this->_options['/u'] .':'. $this->_options['/p'] );
+				break;
+				
 			case 'windows':
 				curl_setopt($curlHandle, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
 				curl_setopt($curlHandle, CURLOPT_USERPWD, $this->_options['/u'] .
 					':' .
 					$this->_options['/p']);
 				break;
-
+				
 			case 'acs':
 				try {
 					$proxy = null;
-
+					
 					if (isset($this->_options['/ph'])) {
 						$proxy = new HttpProxy($this->_options['/ph'],
 							$this->_options['/pp'],
 							$this->_options['/pu'],
 							$this->_options['/ppwd']);
 					}
-
+					
 					$acsutil = new ACSUtil($this->_options['/sn'],
 						$this->_options['/u'],
 						$this->_options['/p'],
@@ -292,7 +305,7 @@ class PHPSvcUtil {
 		echo "Usage:\n\n";
 		echo "php PHPDataSvcUtil.php /config:<config file>";
 		echo "\n\n";
-		echo "php PHPDataSvcUtil.php /uri=<data service Uri> | /metadata=<service metadata file> [/out=<output file path>] [/auth=windows|acs /u=username /p=password [/sn=servicenamespace /at=applies_to] ] [/ph=proxy-host /pp=proxy-port [/pu=proxy-user /ppwd=proxy-password]]\n";
+		echo "php PHPDataSvcUtil.php /uri=<data service Uri> | /metadata=<service metadata file> [/out=<output file path>] [/auth=windows|acs|basic /u=username /p=password [/sn=servicenamespace /at=applies_to] ] [/ph=proxy-host /pp=proxy-port [/pu=proxy-user /ppwd=proxy-password]]\n";
 		echo "\n\n Parameters:";
 		echo "\n  /config           <file>";
 		echo "\n                    Configuration file";
@@ -307,7 +320,7 @@ class PHPSvcUtil {
 		echo "\n  /out              <file>|<dir>";
 		echo "\n                    Target Path (default:Current directory)";
 		echo "\n";
-		echo "\n  /auth             windows|acs";
+		echo "\n  /auth             windows|acs|basic";
 		echo "\n                    Authentication type required to access the OData Service";
 		echo "\n";
 		echo "\n  /u                User name (Required for windows|acs authentication)";
